@@ -1,0 +1,14 @@
+/* src/index.css */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    font-family: "Helvetica Now Display", "Helvetica Neue", Arial, sans-serif;
+  }
+
+  body {
+    @apply font-sans;
+  }
+}
