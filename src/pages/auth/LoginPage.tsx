@@ -1,26 +1,46 @@
 import React from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { FaApple } from "react-icons/fa";
 import AuthShell from "../../components/auth/AuthShell";
 import TextField from "../../components/shared/form/TextField";
 import PasswordField from "../../components/shared/form/PasswordField";
 import PrimaryButton from "../../components/shared/buttons/PrimaryButton";
+import { useAuth } from "../../context/AuthContext";
 
 const LoginPage: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const { login } = useAuth();
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [rememberMe, setRememberMe] = React.useState(false);
   const [loading, setLoading] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
+
+    if (!email || !password) {
+      setError("Enter both email and password to continue.");
+      return;
+    }
+
     setLoading(true);
     try {
-      // TODO: call your real login endpoint
-      // await api.post("/auth/login", { email, password, rememberMe });
+      // Simulated login until backend is wired up
       await new Promise((r) => setTimeout(r, 800));
-      navigate("/"); // go to dashboard
+
+      login({
+        token: "dev-token",
+        user: { id: "demo-user", name: "Demo User", email },
+        remember: rememberMe,
+      });
+
+      const redirectTo =
+        (location.state as { from?: string })?.from ?? "/dashboard";
+
+      navigate(redirectTo, { replace: true });
     } finally {
       setLoading(false);
     }
@@ -74,6 +94,10 @@ const LoginPage: React.FC = () => {
               Forgot Password?
             </Link>
           </div>
+
+          {error && (
+            <p className="text-xs text-red-500">{error}</p>
+          )}
 
           <div className="pt-2">
             <PrimaryButton

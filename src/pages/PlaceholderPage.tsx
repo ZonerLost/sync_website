@@ -1,4 +1,3 @@
-// src/pages/PlaceholderPage.tsx
 import React from "react";
 
 interface PlaceholderPageProps {
