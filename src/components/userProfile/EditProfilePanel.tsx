@@ -4,63 +4,84 @@ import TextField from "../shared/inputs/TextField";
 import { cn } from "../../utils/cn";
 
 export interface EditProfileValues {
-  name: string;
+  fullName: string;
   email: string;
-  avatarUrl?: string | null;
+  phone: string;
+  photo?: File | null;
 }
 
 interface EditProfilePanelProps {
-  initialName: string;
+  initialFullName: string;
   initialEmail: string;
+  initialPhone: string;
   initialAvatarUrl?: string;
   onClose: () => void;
   onSave: (values: EditProfileValues) => void;
+  isSaving?: boolean;
+  errorMessage?: string | null;
 }
 
 const EditProfilePanel: React.FC<EditProfilePanelProps> = ({
-  initialName,
+  initialFullName,
   initialEmail,
+  initialPhone,
   initialAvatarUrl,
   onClose,
   onSave,
+  isSaving = false,
+  errorMessage = null,
 }) => {
-  const [name, setName] = React.useState(initialName);
+  const [fullName, setFullName] = React.useState(initialFullName);
   const [email, setEmail] = React.useState(initialEmail);
-  const [avatarPreview, setAvatarPreview] = React.useState<
-    string | undefined | null
-  >(initialAvatarUrl ?? undefined);
+  const [phone, setPhone] = React.useState(initialPhone);
+  const [selectedFile, setSelectedFile] = React.useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = React.useState<string | undefined>(
+    initialAvatarUrl || undefined
+  );
 
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
 
   React.useEffect(() => {
-    setName(initialName);
+    setFullName(initialFullName);
     setEmail(initialEmail);
-    setAvatarPreview(initialAvatarUrl ?? undefined);
-  }, [initialName, initialEmail, initialAvatarUrl]);
+    setPhone(initialPhone);
+    setSelectedFile(null);
+    setPreviewUrl(initialAvatarUrl || undefined);
+  }, [initialFullName, initialEmail, initialPhone, initialAvatarUrl]);
+
+  React.useEffect(() => {
+    return () => {
+      if (previewUrl && previewUrl.startsWith("blob:")) {
+        URL.revokeObjectURL(previewUrl);
+      }
+    };
+  }, [previewUrl]);
 
   const handleChangePhoto = () => {
     fileInputRef.current?.click();
   };
 
-  const handleFileChange: React.ChangeEventHandler<HTMLInputElement> = (
-    event
-  ) => {
+  const handleFileChange: React.ChangeEventHandler<HTMLInputElement> = (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
-    const url = URL.createObjectURL(file);
-    setAvatarPreview(url);
-  };
 
-  const handleRemovePhoto = () => {
-    setAvatarPreview(null);
+    if (previewUrl && previewUrl.startsWith("blob:")) {
+      URL.revokeObjectURL(previewUrl);
+    }
+
+    const nextPreviewUrl = URL.createObjectURL(file);
+    setSelectedFile(file);
+    setPreviewUrl(nextPreviewUrl);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
     onSave({
-      name,
-      email,
-      avatarUrl: avatarPreview,
+      fullName: fullName.trim(),
+      email: email.trim(),
+      phone: phone.trim(),
+      photo: selectedFile,
     });
   };
 
@@ -69,7 +90,6 @@ const EditProfilePanel: React.FC<EditProfilePanelProps> = ({
       onSubmit={handleSubmit}
       className="flex h-full flex-col rounded-3xl bg-white px-4 pb-4 pt-3 shadow-md"
     >
-      {/* header */}
       <div className="mb-4 flex items-center justify-between">
         <button
           type="button"
@@ -78,19 +98,20 @@ const EditProfilePanel: React.FC<EditProfilePanelProps> = ({
         >
           <span className="text-sm">×</span>
         </button>
+
         <h2 className="flex-1 text-center text-sm font-semibold text-gray-900">
           Edit Profile
         </h2>
-        <div className="h-8 w-8" /> {/* spacer */}
+
+        <div className="h-8 w-8" />
       </div>
 
       <div className="flex-1 overflow-y-auto px-2 pb-4">
-        {/* avatar */}
         <div className="flex flex-col items-center">
           <div className="relative">
             <AvatarCircle
-              name={name}
-              src={avatarPreview ?? undefined}
+              name={fullName}
+              src={previewUrl ?? undefined}
               size="xl"
             />
             <div className="absolute inset-0 flex items-center justify-center">
@@ -105,13 +126,6 @@ const EditProfilePanel: React.FC<EditProfilePanelProps> = ({
           </div>
 
           <div className="mt-3 flex flex-wrap items-center justify-center gap-2 text-xs">
-            <button
-              type="button"
-              onClick={handleRemovePhoto}
-              className="rounded-full border border-gray-200 px-4 py-1.5 font-semibold text-gray-700 hover:bg-gray-50"
-            >
-              Remove photo
-            </button>
             <button
               type="button"
               onClick={handleChangePhoto}
@@ -130,7 +144,6 @@ const EditProfilePanel: React.FC<EditProfilePanelProps> = ({
           />
         </div>
 
-        {/* personal info */}
         <div className="mt-6 text-[11px] font-semibold uppercase tracking-wide text-gray-500">
           Personal Information
         </div>
@@ -138,10 +151,11 @@ const EditProfilePanel: React.FC<EditProfilePanelProps> = ({
         <div className="mt-2 space-y-3">
           <TextField
             label="Full name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
+            value={fullName}
+            onChange={(e) => setFullName(e.target.value)}
             placeholder="Christopher Henry"
           />
+
           <TextField
             label="Email address"
             type="email"
@@ -149,20 +163,33 @@ const EditProfilePanel: React.FC<EditProfilePanelProps> = ({
             onChange={(e) => setEmail(e.target.value)}
             placeholder="christopherhenry344@gmail.com"
           />
+
+          <TextField
+            label="Phone number"
+            type="tel"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            placeholder="+1 (67) 567567 66"
+          />
         </div>
+
+        {errorMessage ? (
+          <div className="mt-3 text-xs text-rose-500">{errorMessage}</div>
+        ) : null}
       </div>
 
-      {/* footer button */}
       <div className="mt-2 px-2">
         <button
           type="submit"
+          disabled={isSaving}
           className={cn(
             "flex h-11 w-full items-center justify-center rounded-2xl bg-[#0F5CCF]",
             "text-sm font-semibold text-white",
-            "hover:bg-[#0d4fb3] focus:outline-none focus:ring-2 focus:ring-blue-200"
+            "hover:bg-[#0d4fb3] focus:outline-none focus:ring-2 focus:ring-blue-200",
+            "disabled:cursor-not-allowed disabled:opacity-60"
           )}
         >
-          Update →
+          {isSaving ? "Updating..." : "Update →"}
         </button>
       </div>
     </form>

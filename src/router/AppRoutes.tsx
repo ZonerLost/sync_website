@@ -1,17 +1,13 @@
 import React from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
-///////////////////////////////////////////////////////////
-//////////////////DASHBOARD LAYOUT ROUTES//////////////////
-//////////////////////////////////////////////////////////
 import DashboardLayout from "../components/layout/DashboardLayout";
 import PlaceholderPage from "../pages/PlaceholderPage";
-
+import { useAuth } from "../context/AuthContext";
 
 import DashboardPage from "../pages/dashboard/DashboardPage";
 import SearchJobsPage from "../pages/search-jobs/SearchJobsPage";
 import UserProfilePage from "../pages/user-profile/UserProfilePage";
 import NotificationsPage from "../pages/notifications/NotificationsPage";
-
 
 import CompanyListPage from "../pages/company-report/CompanyListPage";
 import DailyCompanyPage from "../pages/company-report/DailyCompanyPage";
@@ -33,41 +29,57 @@ import EmailAddressesPage from "../pages/management/EmailAddressesPage";
 import LocksmithsPage from "../pages/management/LocksmithsPage";
 import OperatorsPage from "../pages/management/OperatorsPage";
 
-//////////////////////////////////////////////////////
-//////////////////AUTH PAGE  ROUTES//////////////////
-/////////////////////////////////////////////////////
 import LoginPage from "../pages/auth/LoginPage";
+import ForgotPasswordPage from "../pages/auth/ForgotPasswordPage";
 import ForgotPasswordSentPage from "../pages/auth/ForgotPasswordSentPage";
 import ResetPasswordPage from "../pages/auth/ResetPasswordPage";
+import RegisterPage from "../pages/auth/RegisterPage";
+import VerifyEmailPage from "../pages/auth/VerifyEmailPage";
 
 import ProtectedRoute from "../routes/ProtectedRoute";
+
+const AuthAwareFallback: React.FC = () => {
+  const { auth } = useAuth();
+
+  if (!auth.isHydrated) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#f3f5f9]">
+        <p className="text-sm text-slate-500">Loading...</p>
+      </div>
+    );
+  }
+
+  const isAuthenticated = auth.isAuthenticated && Boolean(auth.token);
+
+  return <Navigate to={isAuthenticated ? "/dashboard" : "/login"} replace />;
+};
 
 const AppRoutes: React.FC = () => {
   return (
     <Routes>
-      {/* ---------- PUBLIC AUTH ROUTES ---------- */}
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/register" element={<RegisterPage />} />
+      <Route path="/verify-email" element={<VerifyEmailPage />} />
+      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/forgot-password/sent" element={<ForgotPasswordSentPage />} />
-      {/* e.g. /reset-password/:token from email link */}
+      {/* Backend reset email URL must target frontend:
+          ${FRONTEND_URL}/reset-password/<token>
+          or ${FRONTEND_URL}/reset-password?token=<token> */}
+      <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
 
-      {/* Root shortcut – will end up in ProtectedRoute and then /login if not authed */}
-      <Route path="/" element={<Navigate to="/dashboard" replace />} />
+      <Route path="/" element={<AuthAwareFallback />} />
 
-      {/* ---------- PROTECTED ROUTES ---------- */}
       <Route element={<ProtectedRoute />}>
         <Route element={<DashboardLayout />}>
-          {/* Main */}
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/notifications" element={<NotificationsPage />} />
           <Route path="/jobs/search" element={<SearchJobsPage />} />
 
-          {/* Company report */}
           <Route path="/company/list" element={<CompanyListPage />} />
           <Route path="/company/daily" element={<DailyCompanyPage />} />
           <Route path="/company/weekly" element={<WeeklyCompanyPage />} />
 
-          {/* Reports */}
           <Route
             path="/reports/daily-locksmiths"
             element={<DailyLocksmithsPage />}
@@ -105,7 +117,6 @@ const AppRoutes: React.FC = () => {
             element={<LocksmithRevenuePage />}
           />
 
-          {/* Management */}
           <Route
             path="/management/add-locksmith"
             element={<PlaceholderPage title="Add Locksmiths" />}
@@ -130,22 +141,17 @@ const AppRoutes: React.FC = () => {
             path="/management/view-accountants"
             element={<AccountantsPage />}
           />
-          <Route
-            path="/management/companies"
-            element={<CompaniesPage />}
-          />
+          <Route path="/management/companies" element={<CompaniesPage />} />
           <Route
             path="/management/email-addresses"
             element={<EmailAddressesPage />}
           />
 
-          {/* Profile */}
           <Route path="/profile" element={<UserProfilePage />} />
         </Route>
       </Route>
 
-      {/* ---------- FALLBACK ---------- */}
-      <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      <Route path="*" element={<AuthAwareFallback />} />
     </Routes>
   );
 };

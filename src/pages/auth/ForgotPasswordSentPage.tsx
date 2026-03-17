@@ -19,12 +19,12 @@ const ForgotPasswordSentPage: React.FC = () => {
           📩
         </div>
 
-        <h1 className="text-xl font-semibold text-gray-900 text-center">
+        <h1 className="text-center text-xl font-semibold text-gray-900">
           Mail Sent!
         </h1>
-        <p className="mt-2 text-sm text-gray-500 text-center max-w-sm mx-auto">
+        <p className="mx-auto mt-2 max-w-sm text-center text-sm text-gray-500">
           We have sent an email to <span className="font-medium">{email}</span>.
-          Please verify and reset your password.
+          Please check your inbox and follow the reset instructions.
         </p>
 
         <div className="mt-8">

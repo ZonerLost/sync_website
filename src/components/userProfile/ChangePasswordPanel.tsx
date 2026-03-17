@@ -5,39 +5,59 @@ import { cn } from "../../utils/cn";
 export interface ChangePasswordValues {
   currentPassword: string;
   newPassword: string;
-  confirmPassword: string;
 }
 
 interface ChangePasswordPanelProps {
   onClose: () => void;
-  onSubmit: (values: ChangePasswordValues) => void;
+  onSubmit: (values: ChangePasswordValues) => Promise<void> | void;
+  isSubmitting?: boolean;
+  errorMessage?: string | null;
 }
 
 const ChangePasswordPanel: React.FC<ChangePasswordPanelProps> = ({
   onClose,
   onSubmit,
+  isSubmitting = false,
+  errorMessage = null,
 }) => {
   const [currentPassword, setCurrentPassword] = React.useState("");
   const [newPassword, setNewPassword] = React.useState("");
   const [confirmPassword, setConfirmPassword] = React.useState("");
-  const [error, setError] = React.useState<string | null>(null);
+  const [localError, setLocalError] = React.useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (newPassword !== confirmPassword) {
-      setError("New password and confirm password do not match.");
+
+    if (!currentPassword.trim() || !newPassword.trim() || !confirmPassword.trim()) {
+      setLocalError("All password fields are required.");
       return;
     }
-    setError(null);
-    onSubmit({ currentPassword, newPassword, confirmPassword });
+
+    if (newPassword.length < 8) {
+      setLocalError("New password must be at least 8 characters.");
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setLocalError("New password and confirm password do not match.");
+      return;
+    }
+
+    setLocalError(null);
+
+    await onSubmit({
+      currentPassword,
+      newPassword,
+    });
   };
+
+  const message = localError || errorMessage;
 
   return (
     <form
       onSubmit={handleSubmit}
       className="flex h-full flex-col rounded-3xl bg-white px-4 pb-4 pt-3 shadow-md"
     >
-      {/* header */}
       <div className="mb-4 flex items-center justify-between">
         <button
           type="button"
@@ -46,9 +66,11 @@ const ChangePasswordPanel: React.FC<ChangePasswordPanelProps> = ({
         >
           <span className="text-sm">×</span>
         </button>
+
         <h2 className="flex-1 text-center text-sm font-semibold text-gray-900">
           Change Password
         </h2>
+
         <div className="h-8 w-8" />
       </div>
 
@@ -60,12 +82,14 @@ const ChangePasswordPanel: React.FC<ChangePasswordPanelProps> = ({
             onChange={(e) => setCurrentPassword(e.target.value)}
             placeholder="••••••••"
           />
+
           <PasswordField
             label="Create new password"
             value={newPassword}
             onChange={(e) => setNewPassword(e.target.value)}
             placeholder="••••••••"
           />
+
           <PasswordField
             label="Confirm new password"
             value={confirmPassword}
@@ -74,23 +98,21 @@ const ChangePasswordPanel: React.FC<ChangePasswordPanelProps> = ({
           />
         </div>
 
-        {error && (
-          <div className="mt-3 text-xs text-rose-500">
-            {error}
-          </div>
-        )}
+        {message ? <div className="mt-3 text-xs text-rose-500">{message}</div> : null}
       </div>
 
       <div className="mt-2 px-2">
         <button
           type="submit"
+          disabled={isSubmitting}
           className={cn(
             "flex h-11 w-full items-center justify-center rounded-2xl bg-[#0F5CCF]",
             "text-sm font-semibold text-white",
-            "hover:bg-[#0d4fb3] focus:outline-none focus:ring-2 focus:ring-blue-200"
+            "hover:bg-[#0d4fb3] focus:outline-none focus:ring-2 focus:ring-blue-200",
+            "disabled:cursor-not-allowed disabled:opacity-60"
           )}
         >
-          Update →
+          {isSubmitting ? "Updating..." : "Update →"}
         </button>
       </div>
     </form>

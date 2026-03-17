@@ -12,45 +12,57 @@ import EditProfilePanel, {
 import ChangePasswordPanel, {
   type ChangePasswordValues,
 } from "../../components/userProfile/ChangePasswordPanel";
-// import { useAuth } from "../../auth/AuthProvider"; // if you have it
-
-interface UserProfileState {
-  name: string;
-  email: string;
-  avatarUrl?: string;
-}
+import { useAuth } from "../../context/AuthContext";
+import { getApiErrorMessage } from "../../api/core/http";
+import { useMyProfile } from "../../hooks/userProfile/useMyProfile";
+import { useUpdateMyProfile } from "../../hooks/userProfile/useUpdateMyProfile";
+import { useChangePassword } from "../../hooks/userProfile/useChangePassword";
 
 const UserProfilePage: React.FC = () => {
-  // const { logout, user } = useAuth(); // example
   const navigate = useNavigate();
-  const [userProfile, setUserProfile] = React.useState<UserProfileState>({
-    name: "Christopher Henry",
-    email: "christopherhenry344@gmail.com",
-    avatarUrl: undefined,
-  });
+  const { logout } = useAuth();
 
+  const { data: profile, isLoading, isError, refetch } = useMyProfile();
+  const updateMyProfileMutation = useUpdateMyProfile();
+  const changePasswordMutation = useChangePassword();
+
+  const [language, setLanguage] = React.useState<LanguageOption>("English");
+  const [showLogoutConfirm, setShowLogoutConfirm] = React.useState(false);
   const [isEditProfileOpen, setIsEditProfileOpen] = React.useState(false);
-  const [isChangePasswordOpen, setIsChangePasswordOpen] =
-    React.useState(false);
-  const [language, setLanguage] =
-    React.useState<LanguageOption>("English");
-  const [showLogoutConfirm, setShowLogoutConfirm] =
-    React.useState(false);
+  const [isChangePasswordOpen, setIsChangePasswordOpen] = React.useState(false);
+  const [profileError, setProfileError] = React.useState<string | null>(null);
+  const [passwordError, setPasswordError] = React.useState<string | null>(null);
 
-  const handleEditSave = (values: EditProfileValues) => {
-    setUserProfile((prev) => ({
-      ...prev,
-      name: values.name,
-      email: values.email,
-      avatarUrl: values.avatarUrl ?? undefined,
-    }));
-    setIsEditProfileOpen(false);
+  const handleEditSave = async (values: EditProfileValues) => {
+    setProfileError(null);
+
+    try {
+      await updateMyProfileMutation.mutateAsync({
+        fullName: values.fullName,
+        email: values.email,
+        phone: values.phone,
+        photo: values.photo ?? null,
+      });
+
+      setIsEditProfileOpen(false);
+    } catch (error) {
+      setProfileError(getApiErrorMessage(error));
+    }
   };
 
-  const handleChangePasswordSubmit = (values: ChangePasswordValues) => {
-    // TODO: call your API here
-    console.log("Change password:", values);
-    setIsChangePasswordOpen(false);
+  const handleChangePasswordSubmit = async (values: ChangePasswordValues) => {
+    setPasswordError(null);
+
+    try {
+      await changePasswordMutation.mutateAsync({
+        currentPassword: values.currentPassword,
+        newPassword: values.newPassword,
+      });
+
+      setIsChangePasswordOpen(false);
+    } catch (error) {
+      setPasswordError(getApiErrorMessage(error));
+    }
   };
 
   const handleLogout = () => {
@@ -59,10 +71,41 @@ const UserProfilePage: React.FC = () => {
 
   const handleConfirmLogout = () => {
     setShowLogoutConfirm(false);
-    // if you have auth context: logout();
-    // clear tokens/storage here if needed
+    logout();
     navigate("/login", { replace: true });
   };
+
+  if (isLoading) {
+    return (
+      <PageContainer fullWidth>
+        <div className="flex min-h-[320px] items-center justify-center">
+          <p className="text-sm text-gray-500">Loading profile...</p>
+        </div>
+      </PageContainer>
+    );
+  }
+
+  if (isError || !profile) {
+    return (
+      <PageContainer fullWidth>
+        <div className="rounded-3xl border border-red-100 bg-red-50 p-6">
+          <h2 className="text-lg font-semibold text-red-700">
+            Failed to load profile
+          </h2>
+          <p className="mt-2 text-sm text-red-600">
+            We could not load your profile details right now.
+          </p>
+          <button
+            type="button"
+            onClick={() => refetch()}
+            className="mt-4 rounded-full bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700"
+          >
+            Retry
+          </button>
+        </div>
+      </PageContainer>
+    );
+  }
 
   return (
     <PageContainer fullWidth>
@@ -71,36 +114,37 @@ const UserProfilePage: React.FC = () => {
       </h1>
 
       <ProfileHeaderCard
-        name={userProfile.name}
-        email={userProfile.email}
-        avatarUrl={userProfile.avatarUrl}
+        name={profile.fullName}
+        email={profile.email}
+        avatarUrl={profile.photoUrl}
         onEditClick={() => setIsEditProfileOpen(true)}
       />
 
       <UserSettingsList
         onChangePassword={() => setIsChangePasswordOpen(true)}
-        onLanguageClick={() => console.log("Language clicked")}
+        onLanguageClick={() => undefined}
         language={language}
         onLanguageChange={setLanguage}
         onLogout={handleLogout}
       />
 
-      {/* Edit Profile slide-over */}
       <SlideOver
         isOpen={isEditProfileOpen}
         onClose={() => setIsEditProfileOpen(false)}
         widthClassName="max-w-sm"
       >
         <EditProfilePanel
-          initialName={userProfile.name}
-          initialEmail={userProfile.email}
-          initialAvatarUrl={userProfile.avatarUrl}
+          initialFullName={profile.fullName}
+          initialEmail={profile.email}
+          initialPhone={profile.phone}
+          initialAvatarUrl={profile.photoUrl}
           onClose={() => setIsEditProfileOpen(false)}
           onSave={handleEditSave}
+          isSaving={updateMyProfileMutation.isPending}
+          errorMessage={profileError}
         />
       </SlideOver>
 
-      {/* Change Password slide-over */}
       <SlideOver
         isOpen={isChangePasswordOpen}
         onClose={() => setIsChangePasswordOpen(false)}
@@ -109,10 +153,11 @@ const UserProfilePage: React.FC = () => {
         <ChangePasswordPanel
           onClose={() => setIsChangePasswordOpen(false)}
           onSubmit={handleChangePasswordSubmit}
+          isSubmitting={changePasswordMutation.isPending}
+          errorMessage={passwordError}
         />
       </SlideOver>
 
-      {/* Logout confirmation modal */}
       {showLogoutConfirm && (
         <div className="fixed inset-0 z-[2000] flex items-center justify-center bg-black/40 px-4">
           <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl shadow-slate-500/30">
@@ -120,6 +165,7 @@ const UserProfilePage: React.FC = () => {
             <p className="mt-2 text-sm text-gray-600">
               You will be returned to the login page.
             </p>
+
             <div className="mt-6 flex items-center justify-end gap-3">
               <button
                 type="button"
@@ -128,6 +174,7 @@ const UserProfilePage: React.FC = () => {
               >
                 Cancel
               </button>
+
               <button
                 type="button"
                 className="rounded-full bg-red-500 px-4 py-2 text-sm font-semibold text-white hover:bg-red-600"
