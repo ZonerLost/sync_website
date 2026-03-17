@@ -7,16 +7,16 @@ const DashboardLayout: React.FC = () => {
   const [isSidebarOpen, setIsSidebarOpen] = React.useState(false);
 
   return (
-    <div className="flex min-h-screen bg-slate-50">
+    <div className="flex h-screen overflow-hidden bg-slate-50">
       <Sidebar
         isOpen={isSidebarOpen}
         onClose={() => setIsSidebarOpen(false)}
       />
 
-      <div className="flex min-h-screen flex-1 flex-col">
+      <div className="flex h-full min-w-0 flex-1 flex-col overflow-hidden">
         <Topbar onToggleSidebar={() => setIsSidebarOpen((prev) => !prev)} />
 
-        <main className="flex-1 p-3 md:p-6">
+        <main className="flex-1 min-h-0 overflow-y-auto p-3 md:p-6">
           <Outlet />
         </main>
       </div>
